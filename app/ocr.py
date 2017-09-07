@@ -1,4 +1,5 @@
 from pytesseract import pytesseract, image_to_string
+import PIL.ImageFilter
 from PIL import Image
 import numpy as np
 import cv2
@@ -25,5 +26,8 @@ def rotate_image(path):
 
 def extract_text_from_image(image_path):
     im = rotate_image(image_path)
+    arr = cv2.erode(np.array(im.convert('L')), np.ones((3, 3)), iterations=2)
+    arr = cv2.dilate(arr, np.ones((3, 3)), iterations=1)
+    im=Image.fromarray(arr)
     res = image_to_string(im, lang='ces')
     return res
