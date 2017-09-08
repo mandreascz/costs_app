@@ -4,7 +4,6 @@ import re
 from . import logger
 
 
-
 class BaseParser:
     shop_identifiers = []
 
@@ -32,11 +31,11 @@ class BaseParser:
 
 class TescoParser(BaseParser):
     shop_identifiers = ['TESCO STORES', 'CLUBCARD']
-    simple_goods_pattern = re.compile('^([^\d].*)\s(\d{1,4})\s*,*[\s\d\w%]*$', flags=re.M)
-    amount_goods_pattern = re.compile('^(.*)\n([\w,\s]+)[\*©].*\s(\d{1,3}\s*[.,]\s*\d{2,3})[BR8\s]*$', flags=re.M)
+    simple_goods_pattern = re.compile('^(\D[\d\w\sÀ-ÿ.,/]*)\s(\d{1,4})\s?[.,]?[\s\w%]*$', flags=re.M | re.I)
+    amount_goods_pattern = re.compile('^(.*)\n([\w,\s]+)[\*©r].*\s(\d{1,3}\s*[.,]\s*\d{2,3})[BR8\s]$', flags=re.M)
 
     def get_goods_text(self):
-        goods_start = ['K.c.', 'Kč', 'Kc', 'K <:', 'lži']
+        goods_start = ['K.c.', 'Kč', 'Kc', 'K <:', 'lži', '!(Cš']
         goods_end = ['CELKEM']
         text_to_remove = ['Z 1. F V N F N 0']
         start_list = []
@@ -57,30 +56,28 @@ class TescoParser(BaseParser):
         logger.debug(self.goods_text)
 
     def parse_goods(self):
+
+        # Second pass for the two-row goods
+        for idx, line in enumerate(self.goods_text):
+            if idx >= len(self.goods_text) - 1:
+                break
+            if line['parsed'] or self.goods_text[idx + 1]['parsed']:
+                continue
+            match = re.match(self.amount_goods_pattern, "{}\n{}".format(line['line'], self.goods_text[idx + 1]['line']))
+            if match is not None:
+                item, amount, price = match.groups()
+                line['parsed'] = True
+                self.goods_text[idx + 1]['parsed'] = True
+                logger.debug((item, amount, price))
+
         for line in self.goods_text:
+            if line['parsed']:
+                continue
             match = re.match(self.simple_goods_pattern, line['line'])
             if match is not None:
                 item, price = match.groups()
                 line['parsed'] = True
                 logger.debug((item, price))
-
-        # Second pass for the two-row goods
-        two_rows_goods = list(filter(lambda x: not x['parsed'], self.goods_text))
-        for idx, line in enumerate(two_rows_goods):
-            if idx >= len(two_rows_goods) - 1:
-                break
-            match = re.match(self.amount_goods_pattern, "{}\n{}".format(line['line'], two_rows_goods[idx+1]['line']))
-            if match is not None:
-                item, amount, price = match.groups()
-                line['parsed'] = True
-                logger.debug((item, amount, price))
-
-
-
-
-
-
-
 
 
 class AlbertParser(BaseParser):
