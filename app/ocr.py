@@ -4,9 +4,9 @@ from PIL import Image
 import numpy as np
 import cv2
 
-from . import TESSERACT_PATH
+# from . import TESSERACT_PATH
 
-pytesseract.tesseract_cmd = TESSERACT_PATH
+# pytesseract.tesseract_cmd = TESSERACT_PATH
 
 
 def rotate_image(path):

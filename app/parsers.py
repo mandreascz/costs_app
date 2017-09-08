@@ -69,7 +69,7 @@ class TescoParser(BaseParser):
         for idx, line in enumerate(two_rows_goods):
             if idx >= len(two_rows_goods) - 1:
                 break
-            match = re.match(self.amount_goods_pattern, f"{line['line']}\n{two_rows_goods[idx+1]['line']}")
+            match = re.match(self.amount_goods_pattern, "{}\n{}".format(line['line'], two_rows_goods[idx+1]['line']))
             if match is not None:
                 item, amount, price = match.groups()
                 line['parsed'] = True
