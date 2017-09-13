@@ -2,6 +2,7 @@ from fuzzywuzzy import fuzz
 import numpy as np
 import re
 import pandas as pd
+import datetime
 import warnings
 
 from . import logger
@@ -12,6 +13,7 @@ class BaseParser:
     shop_identifiers = []
 
     def __init__(self, recognized_text):
+        self.text = recognized_text
         self.list_text = [{'line': line, 'parsed': False, 'to_delete': False}
                           for line in recognized_text.splitlines() if line]
         self.goods_text = None
@@ -22,6 +24,7 @@ class BaseParser:
 
     def parse(self):
         self.get_goods_text()
+        self.get_date()
         self.get_total_amount()
         self.parse_goods()
         self.verify_totals_integrity()
@@ -59,6 +62,7 @@ class BaseParser:
 class TescoParser(BaseParser):
     shop_identifiers = ['TESCO STORES', 'CLUBCARD']
     total_amount_pattern = re.compile('(\d{1,4}\s?[,.]\s?\d{2})')
+    date_pattern = re.compile('((?:\d{2}\/){2}\d{2})')
     simple_goods_pattern = re.compile('^(\D[\w\sÀ-ÿ.,/%"—]*[^,])\s(\d{1,4}\s?[.,]?\d{0,2})[\s\w%]*$', flags=re.M | re.I)
     two_line_goods_pattern = re.compile('^(.*)\n([\w,\s]+)[\*©r].*\s(\d{1,3}\s*[.,]\s*\d{2,3})[BR8\s]$', flags=re.M)
 
@@ -120,8 +124,17 @@ class TescoParser(BaseParser):
             total_amount = match.group()
             self.total_amount = self.get_numbers(total_amount)
         else:
-            raise ReceiptParsingException
+            raise ReceiptParsingException('Total amount not found.')
         self.goods_text.pop()
+
+    def get_date(self):
+        match = re.search(self.date_pattern, self.text)
+        if match:
+            date = match.group()
+            self.date = datetime.datetime.strptime(date, "%d/%m/%y")
+            return self.date
+        else:
+            raise ReceiptParsingException('Date not found.')
 
 
 class AlbertParser(BaseParser):

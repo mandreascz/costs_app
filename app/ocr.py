@@ -36,7 +36,7 @@ def extract_text_from_image(image_path):
     # arr[~cond] = 0
 
     h, w = arr.shape
-    ratio = 1.25
+    ratio = 1
     arr = cv2.resize(arr, (int(w*ratio), int(h*ratio)))
 
     im=Image.fromarray(arr)
