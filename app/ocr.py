@@ -26,8 +26,19 @@ def rotate_image(path):
 
 def extract_text_from_image(image_path):
     im = rotate_image(image_path)
-    arr = cv2.erode(np.array(im.convert('L')), np.ones((3, 3)), iterations=2)
+    arr = np.array(im.convert('L'))
+
+    arr = cv2.erode(arr, np.ones((3, 3)), iterations=2)
     arr = cv2.dilate(arr, np.ones((3, 3)), iterations=1)
+
+    # cond = arr > 100
+    # arr[cond] = 255
+    # arr[~cond] = 0
+
+    h, w = arr.shape
+    ratio = 1.25
+    arr = cv2.resize(arr, (int(w*ratio), int(h*ratio)))
+
     im=Image.fromarray(arr)
     res = image_to_string(im, lang='ces')
     return res

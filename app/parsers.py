@@ -2,7 +2,10 @@ from fuzzywuzzy import fuzz
 import numpy as np
 import re
 import pandas as pd
+import warnings
+
 from . import logger
+
 
 
 class BaseParser:
@@ -22,8 +25,6 @@ class BaseParser:
         self.get_total_amount()
         self.parse_goods()
         self.verify_totals_integrity()
-
-        print(self.good_df)
         return self
 
     def get_goods_text(self):
@@ -39,12 +40,12 @@ class BaseParser:
         pass
 
     def verify_totals_integrity(self):
-        self._total_sum_goods = self.good_df.Price.sum()
+        self._total_sum_goods = self.good_df.Price.sum() if not self.good_df.empty else 0.0
         diff = self.total_amount - self._total_sum_goods
         if diff > 1:
-            self.good_df = self.good_df.append(pd.DataFrame({'Item': 'Unknown',
+            self.good_df = self.good_df.append(pd.DataFrame([{'Item': 'Unknown',
                                                              'Amount': None,
-                                                             'Price': diff}))
+                                                             'Price': diff}]))
 
     @property
     def not_parsed(self):
@@ -80,6 +81,10 @@ class TescoParser(BaseParser):
         end = np.argmax(end_list)
         self.goods_text = self.list_text[start + 1:end + 1]
         self.goods_text = list(filter(lambda x: not x['to_delete'], self.goods_text))
+
+        if not self.goods_text:
+            raise ReceiptParsingException
+
         logger.debug(self.goods_text)
 
     def parse_goods(self):
@@ -114,6 +119,8 @@ class TescoParser(BaseParser):
         if match:
             total_amount = match.group()
             self.total_amount = self.get_numbers(total_amount)
+        else:
+            raise ReceiptParsingException
         self.goods_text.pop()
 
 
@@ -140,6 +147,10 @@ class ParserFactory:
 
         best_matching = max(score, key=lambda x: x[1])
         return best_matching[0](text)
+
+
+class ReceiptParsingException(Exception):
+    pass
 
 
 
