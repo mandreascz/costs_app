@@ -6,7 +6,7 @@ import datetime
 import warnings
 
 from . import logger
-
+from .exceptions import ReceiptParsingException, ReceiptIntegrityException
 
 
 class BaseParser:
@@ -28,7 +28,7 @@ class BaseParser:
         self.get_total_amount()
         self.parse_goods()
         self.verify_totals_integrity()
-        return self
+        return {'total': self.total_amount, 'date': self.date, 'data': self.good_df}
 
     def get_goods_text(self):
         pass
@@ -44,6 +44,8 @@ class BaseParser:
 
     def verify_totals_integrity(self):
         self._total_sum_goods = self.good_df.Price.sum() if not self.good_df.empty else 0.0
+        if not all((self.total_amount, self._total_sum_goods)):
+            raise ReceiptIntegrityException
         diff = self.total_amount - self._total_sum_goods
         if diff > 1:
             self.good_df = self.good_df.append(pd.DataFrame([{'Item': 'Unknown',
@@ -124,7 +126,7 @@ class TescoParser(BaseParser):
             total_amount = match.group()
             self.total_amount = self.get_numbers(total_amount)
         else:
-            raise ReceiptParsingException('Total amount not found.')
+            pass  # raise ReceiptParsingException('Total amount not found.')
         self.goods_text.pop()
 
     def get_date(self):
@@ -132,9 +134,8 @@ class TescoParser(BaseParser):
         if match:
             date = match.group()
             self.date = datetime.datetime.strptime(date, "%d/%m/%y")
-            return self.date
         else:
-            raise ReceiptParsingException('Date not found.')
+            pass  # raise ReceiptParsingException('Date not found.')
 
 
 class AlbertParser(BaseParser):
@@ -162,8 +163,6 @@ class ParserFactory:
         return best_matching[0](text)
 
 
-class ReceiptParsingException(Exception):
-    pass
 
 
 
